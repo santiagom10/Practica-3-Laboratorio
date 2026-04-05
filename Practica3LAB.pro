@@ -1,7 +1,9 @@
-TEMPLATE = app
-CONFIG += console c++17
+QT -= gui
+
+CONFIG += c++17 console
 CONFIG -= app_bundle
-CONFIG -= qt
+
+TARGET = practica3_rle
 
 SOURCES += \
-        main.cpp
+    main.cpp
