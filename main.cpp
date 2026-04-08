@@ -189,7 +189,6 @@ ParSalida* comprimirLZ78(const char* texto, int tamanoTexto, int& cantidadPares)
 
         } else {
             // Caso especial: el texto termina exactamente en una frase del diccionario
-            // Se emite el par (mejorIndice, \0) marcado como ultimo
             pares[cantidadPares].indice   = mejorIndice;
             pares[cantidadPares].caracter = '\0';
             pares[cantidadPares].esUltimo = true;
@@ -222,16 +221,13 @@ char* descomprimirLZ78(ParSalida* pares, int cantidadPares, int& tamanoSalida) {
         char caracter = pares[p].caracter;
         bool esUltimo = pares[p].esUltimo;
 
-        // Calcular longitud de la frase completa
         int longitudPrefijo = 0;
         if (indice > 0) {
             longitudPrefijo = longitudFrase(diccionario, indice - 1);
         }
 
-        // Si es el ultimo par especial, no se agrega el caracter extra
         int longitudTotal = esUltimo ? longitudPrefijo : longitudPrefijo + 1;
 
-        // Reconstruir la frase en un arreglo temporal
         char* fraseReconstruida = new char[longitudTotal];
 
         if (indice > 0) {
@@ -247,7 +243,6 @@ char* descomprimirLZ78(ParSalida* pares, int cantidadPares, int& tamanoSalida) {
             fraseReconstruida[longitudTotal - 1] = caracter;
         }
 
-        // Agregar la frase a la salida
         for (int i = 0; i < longitudTotal; i++) {
             if (tamanoSalida >= capacidadSalida) {
                 capacidadSalida *= 2;
@@ -259,7 +254,6 @@ char* descomprimirLZ78(ParSalida* pares, int cantidadPares, int& tamanoSalida) {
             salida[tamanoSalida++] = fraseReconstruida[i];
         }
 
-        // Agregar nueva entrada al diccionario (solo si no es el ultimo especial)
         if (!esUltimo) {
             if (tamanoDiccionario >= capacidadDiccionario) {
                 capacidadDiccionario *= 2;
@@ -280,6 +274,55 @@ char* descomprimirLZ78(ParSalida* pares, int cantidadPares, int& tamanoSalida) {
     return salida;
 }
 
+// Rota los bits de un byte hacia la izquierda n posiciones
+// Ejemplo: 01000001 rotado 2 -> 00000101
+unsigned char rotarIzquierda(unsigned char byte, int n) {
+    return (byte << n) | (byte >> (8 - n));
+}
+
+// Rota los bits de un byte hacia la derecha n posiciones (inverso de rotarIzquierda)
+unsigned char rotarDerecha(unsigned char byte, int n) {
+    return (byte >> n) | (byte << (8 - n));
+}
+
+// Encripta un arreglo de bytes:
+// 1. Rotacion de bits a la izquierda n posiciones
+// 2. XOR con la clave
+unsigned char* encriptar(const unsigned char* datos, int tamano, int n, unsigned char clave) {
+    if (tamano <= 0) {
+        throw invalid_argument("Error: No hay datos para encriptar.");
+    }
+    if (n <= 0 || n >= 8) {
+        throw invalid_argument("Error: El valor de n debe estar entre 1 y 7.");
+    }
+
+    unsigned char* resultado = new unsigned char[tamano];
+    for (int i = 0; i < tamano; i++) {
+        unsigned char rotado = rotarIzquierda(datos[i], n);
+        resultado[i]         = rotado ^ clave;
+    }
+    return resultado;
+}
+
+// Desencripta un arreglo de bytes (proceso inverso):
+// 1. XOR con la misma clave (deshace el XOR)
+// 2. Rotacion de bits a la derecha n posiciones (deshace la rotacion)
+unsigned char* desencriptar(const unsigned char* datos, int tamano, int n, unsigned char clave) {
+    if (tamano <= 0) {
+        throw invalid_argument("Error: No hay datos para desencriptar.");
+    }
+    if (n <= 0 || n >= 8) {
+        throw invalid_argument("Error: El valor de n debe estar entre 1 y 7.");
+    }
+
+    unsigned char* resultado = new unsigned char[tamano];
+    for (int i = 0; i < tamano; i++) {
+        unsigned char sinXor = datos[i] ^ clave;
+        resultado[i]         = rotarDerecha(sinXor, n);
+    }
+    return resultado;
+}
+
 int main() {
 
     int opcion;
@@ -289,6 +332,7 @@ int main() {
     cout << "Seleccione el modulo a probar:" << endl;
     cout << "1. RLE" << endl;
     cout << "2. LZ78" << endl;
+    cout << "3. Encriptacion" << endl;
     cout << "Opcion: ";
     cin >> opcion;
     cout << endl;
@@ -391,6 +435,77 @@ int main() {
         }
 
         delete[] texto;
+
+        // ── MODULO ENCRIPTACION ───────────────────────────────────
+    } else if (opcion == 3) {
+        cout << "=========================================" << endl;
+        cout << "           MODULO ENCRIPTACION           " << endl;
+        cout << "=========================================" << endl;
+
+        string entrada;
+        cout << "Ingrese una cadena de texto: ";
+        cin.ignore();
+        getline(cin, entrada);
+
+        int n;
+        cout << "Ingrese el valor de rotacion n (1-7): ";
+        cin >> n;
+
+        int valorClave;
+        cout << "Ingrese la clave K (0-255): ";
+        cin >> valorClave;
+        unsigned char clave = (unsigned char) valorClave;
+
+        // Convertir la cadena a arreglo de bytes
+        int tamano           = entrada.size();
+        unsigned char* datos = new unsigned char[tamano];
+        for (int i = 0; i < tamano; i++) {
+            datos[i] = (unsigned char) entrada[i];
+        }
+
+        try {
+            // 1. Encriptar
+            unsigned char* datosEncriptados = encriptar(datos, tamano, n, clave);
+
+            cout << "Bytes encriptados (decimal): ";
+            for (int i = 0; i < tamano; i++) {
+                cout << (int) datosEncriptados[i];
+                if (i < tamano - 1) cout << " ";
+            }
+            cout << endl;
+
+            // 2. Desencriptar
+            unsigned char* datosRecuperados = desencriptar(datosEncriptados, tamano, n, clave);
+
+            cout << "Texto recuperado  : ";
+            for (int i = 0; i < tamano; i++) {
+                cout << (char) datosRecuperados[i];
+            }
+            cout << endl;
+
+            // 3. Verificar
+            bool coincide = true;
+            for (int i = 0; i < tamano; i++) {
+                if (datos[i] != datosRecuperados[i]) {
+                    coincide = false;
+                    break;
+                }
+            }
+
+            if (coincide) {
+                cout << "Verificacion: OK [PASS] - el texto recuperado coincide con el original." << endl;
+            } else {
+                cout << "Verificacion: [FAIL] - NO coincide." << endl;
+            }
+
+            delete[] datosEncriptados;
+            delete[] datosRecuperados;
+
+        } catch (const invalid_argument& error) {
+            cout << "Error de argumento: " << error.what() << endl;
+        }
+
+        delete[] datos;
 
     } else {
         cout << "Opcion no valida." << endl;
