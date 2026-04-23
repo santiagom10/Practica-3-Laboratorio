@@ -268,7 +268,7 @@ char* descomprimirLZ78(ParSalida* pares, int cantidadPares, int& tamanoSalida) {
 }
 
 // ============================================================
-//  MODULO ENCRIPTACION POR ROTACION - Seccion 5.3a
+//  MODULO ENCRIPTACION POR ROTACION
 // ============================================================
 
 // Rota los bits de un byte hacia la izquierda n posiciones
@@ -332,7 +332,7 @@ unsigned char* encriptarXOR(const unsigned char* datos, int tamano, unsigned cha
 }
 
 // ============================================================
-//  MODULO ARCHIVOS - Seccion 5.4
+//  MODULO ARCHIVOS
 // ============================================================
 
 string leerArchivo(const string& nombreArchivo) {
@@ -546,7 +546,6 @@ int main() {
 
         string entrada;
         cout << "Ingrese una cadena de texto: ";
-        cin.ignore();
         getline(cin, entrada);
 
         int valorClave;
@@ -676,7 +675,6 @@ int main() {
             unsigned char* bytesRotados     = encriptarRotacion(bytesComprimidos, tamanoComprimido, n);
             unsigned char* bytesEncriptados = encriptarXOR(bytesRotados, tamanoComprimido, clave);
 
-            // 🔽 AGREGAR ESTO
             cout << "[3.1] Bytes despues de rotacion: ";
             for (int i = 0; i < tamanoComprimido; i++) {
                 cout << (int)bytesRotados[i] << " ";
